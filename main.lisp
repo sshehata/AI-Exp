@@ -21,3 +21,21 @@
 
 (defmethod grid-emptyblockp ((g grid) x y)
   (eql (aref (grid-blocks g) x y) 0))
+
+
+;; Helper functions
+
+(defun pairwise-merge (l)
+  (if (null l)
+    nil
+    (if (null (car (cdr l)))
+     l
+     (let ((x1 (car l))
+          (x2 (car (cdr l))))
+      (if (zerop x1)
+        (pairwise-merge (cdr l))
+        (if (zerop x2)
+          (pairwise-merge (cons x1 (cdr (cdr l))))
+          (if (eql x1 x2)
+            (cons (* 2 x1) (pairwise-merge (cdr (cdr l))))
+            (cons x1 (pairwise-merge (cdr l))))))))))
