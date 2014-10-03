@@ -1,5 +1,25 @@
+;; =========================================
+;; =========== REQUIRED FUNCTIONS ==========
+;; =========================================
+
+(defun GenGrid ()
+  (let ((size 4)
+        (g (make-instance 'grid :size 4)))
+    (grid-spwanblock g (random size) (random size))
+    (do ((x (random size) (random size))
+         (y (random size) (random size)))
+      ((grid-emptyblockp g x y) 
+       (grid-spwanblock g x y) 
+       (grid-display g) 
+       g))))
+
+;; =========================================
+
+;; Grid Class
+;; =========================================
+
 (defclass grid () 
-  ((blocks :accessor grid-blocks)
+  ((locks :accessor grid-blocks)
    (size :initarg :size :initform 4 :accessor grid-size)))
 
 (defmethod initialize-instance :after ((g grid) &KEY)
@@ -22,7 +42,8 @@
 (defmethod grid-emptyblockp ((g grid) x y)
   (eql (aref (grid-blocks g) x y) 0))
 
-;; operators
+;; Operators
+;; ==========================================
 
 (defmethod grid-right ((g grid))
   (setf (grid-blocks g) (toarray (mapcar #'collect-right (listify2d (grid-blocks g))))))
@@ -38,7 +59,8 @@
   (setf (grid-blocks g)
         (toarray (rotate (mapcar #'collect-right (rotate (listify2d (grid-blocks g))))))))
 
-;; Helper functions
+;; Helper Functions
+;; ==========================================
 
 (defun rotate (l)
   (apply #'mapcar #'list l))
