@@ -46,18 +46,30 @@
 ;; ==========================================
 
 (defmethod grid-right ((g grid))
-  (setf (grid-blocks g) (toarray (mapcar #'collect-right (listify2d (grid-blocks g))))))
+  (defparameter *cost* 0)
+  (let ((g2 (make-instance 'grid :size (grid-size g)))) 
+    (setf (grid-blocks g2) (toarray (mapcar #'collect-right (listify2d (grid-blocks g)))))
+    (values-list (list g2 *cost*))))
 
 (defmethod grid-left ((g grid))
-  (setf (grid-blocks g) (toarray (mapcar #'collect-left (listify2d (grid-blocks g))))))
+  (defparameter *cost* 0)
+  (let ((g2 (make-instance 'grid :size (grid-size g)))) 
+    (setf (grid-blocks g2) (toarray (mapcar #'collect-left (listify2d (grid-blocks g)))))
+    (values-list (list g2 *cost*))))
 
 (defmethod grid-up ((g grid))
-  (setf (grid-blocks g) 
-        (toarray (rotate (mapcar #'collect-left (rotate (listify2d (grid-blocks g))))))))
+  (defparameter *cost* 0)
+  (let ((g2 (make-instance 'grid :size (grid-size g)))) 
+    (setf (grid-blocks g2) 
+          (toarray (rotate (mapcar #'collect-left (rotate (listify2d (grid-blocks g)))))))
+    (values-list (list g2 *cost*))))
 
 (defmethod grid-down ((g grid))
-  (setf (grid-blocks g)
-        (toarray (rotate (mapcar #'collect-right (rotate (listify2d (grid-blocks g))))))))
+  (defparameter *cost* 0)
+  (let ((g2 (make-instance 'grid :size (grid-size g)))) 
+    (setf (grid-blocks g2)
+          (toarray (rotate (mapcar #'collect-right (rotate (listify2d (grid-blocks g)))))))
+    (values-list (list g2 *cost*))))
 
 ;; Helper Functions
 ;; ==========================================
@@ -86,7 +98,8 @@
                  (zerop x2))
           (pairwise-merge (cons x1 (cdr (cdr l))))
           (if (eql x1 x2)
-            (cons (* 2 x1) (pairwise-merge (cdr (cdr l))))
+            (progn (setf *cost* (+ *cost* (* 2 x1)))
+                   (cons (* 2 x1) (pairwise-merge (cdr (cdr l)))))
             (cons x1 (pairwise-merge (cdr l)))))))))
 
 (defun listify2d (x)
