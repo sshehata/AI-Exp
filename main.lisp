@@ -26,7 +26,7 @@
 
 ; a general search function.
 (defmethod general-search ((prp search-p) qing-fun)
-  (let ((root (make-node :state (initial-state s0)
+  (let ((root (make-node :state (initial-state prp)
                          :depth 0
                          :cost  0)))
     (search-helper prp (list root) qing-fun)))
@@ -41,16 +41,17 @@
     (if (funcall (search-goalp prp) head)
       head 
       (search-helper prp
-                     (funcall qing-fun (cdr queue) (expand head (search-ops prp)))
+                     (funcall qing-fun (cdr queue) 
+                                       (expand head (search-ops prp) (search-cost prp)))
                      qing-fun))))
 
-(defun expand (head operators)
+(defun expand (head operators costfun)
   (mapcar #'(lambda (op) (let ((new-cost 0)
                                (new-state nil))
-                           (setf (new-state new-cost) (funcall op (node-state head)))
+                           (setf (values new-state new-cost) (funcall op (node-state head)))
                            (make-node :state    new-state
                                       :parent   head
                                       :operator op
                                       :depth    (+ (node-depth head) 1)
-                                      :cost     (funcall (node-cost head) new-cost))))
+                                      :cost     (funcall costfun (node-cost head) new-cost))))
           operators))

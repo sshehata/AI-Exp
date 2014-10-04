@@ -19,8 +19,13 @@
 ;; =========================================
 
 (defclass grid () 
-  ((locks :accessor grid-blocks)
-   (size :initarg :size :initform 4 :accessor grid-size)))
+  ((blocks  :accessor grid-blocks)
+
+   (size    :initarg :size 
+            :initform 4 :accessor grid-size)
+
+   (maximum :accessor grid-max
+            :initform 0)))
 
 (defmethod initialize-instance :after ((g grid) &KEY)
   (let ((size (grid-size g))) 
@@ -42,6 +47,27 @@
 (defmethod grid-emptyblockp ((g grid) x y)
   (eql (aref (grid-blocks g) x y) 0))
 
+(defmethod grid-update ((g grid))
+  (let ((border (- (grid-size g) 1)))
+    (if (grid-emptyblockp g 0 0)
+      (grid-spwanblock g 0 0)
+      (if (grid-emptyblockp g 0 border)
+        (grid-spwanblock g 0 border)
+        (if (grid-emptyblockp g border border)
+          (grid-spwanblock g border border)
+          (if (grid-emptyblockp g border 0)
+            (grid-spwanblock g border 0)
+            nil))))))
+
+(defmethod grid-find-max ((g grid))
+  (do ((i 0 (1+ i)))
+    ((>= i (grid-size g)) nil)
+    (do ((j 0 (1+ j)))
+      ((>= j (grid-size g)) nil)
+      (let ((el (aref (grid-blocks g) i j)))
+        (if (> el (grid-max g))
+          (setf (grid-max g) el))))))
+
 ;; Operators
 ;; ==========================================
 
@@ -49,12 +75,16 @@
   (defparameter *cost* 0)
   (let ((g2 (make-instance 'grid :size (grid-size g)))) 
     (setf (grid-blocks g2) (toarray (mapcar #'collect-right (listify2d (grid-blocks g)))))
+    (grid-update g2)
+    (grid-find-max g2)
     (values-list (list g2 *cost*))))
 
 (defmethod grid-left ((g grid))
   (defparameter *cost* 0)
   (let ((g2 (make-instance 'grid :size (grid-size g)))) 
     (setf (grid-blocks g2) (toarray (mapcar #'collect-left (listify2d (grid-blocks g)))))
+    (grid-update g2)
+    (grid-find-max g2)
     (values-list (list g2 *cost*))))
 
 (defmethod grid-up ((g grid))
@@ -62,6 +92,8 @@
   (let ((g2 (make-instance 'grid :size (grid-size g)))) 
     (setf (grid-blocks g2) 
           (toarray (rotate (mapcar #'collect-left (rotate (listify2d (grid-blocks g)))))))
+    (grid-update g2)
+    (grid-find-max g2)
     (values-list (list g2 *cost*))))
 
 (defmethod grid-down ((g grid))
@@ -69,6 +101,8 @@
   (let ((g2 (make-instance 'grid :size (grid-size g)))) 
     (setf (grid-blocks g2)
           (toarray (rotate (mapcar #'collect-right (rotate (listify2d (grid-blocks g)))))))
+    (grid-update g2)
+    (grid-find-max g2)
     (values-list (list g2 *cost*))))
 
 ;; Helper Functions
