@@ -2,6 +2,27 @@
 ;; =========== REQUIRED FUNCTIONS ==========
 ;; =========================================
 
+; search for a solution for the given grid and
+; target M using the given strategy
+; named Search_ because we can not override the
+; predefined search function
+(defun Search_ (grid M strategy visualise)
+  (labels ((goalp (g) (eql (grid-max g) M)))
+    (let* ((ops '(grid-up grid-down grid-left grid-right))
+           (prp (make-instance 'search-p :operators ops
+                                         :initial   grid
+                                         :goalp     #'goalp
+                                         :costfun   #'+)))
+      (multiple-value-bind (sol expand-count sol-cost)
+        (general-search prp strategy)
+        (if visualise
+          (show-solution grid sol #'grid-display))   
+        (list sol sol-cost expand-count)))))
+
+;; =========================================
+;; ========== REQUIRED DATA TYPES ==========
+;; =========================================
+
 ; a search tree node.
 (defstruct node
   state parent operator depth cost)
@@ -35,27 +56,32 @@
   (let ((root (make-node :state (initial-state prp)
                          :depth 0
                          :cost  0)))
-    (let ((goal-node (search-helper prp (list root) qing-fun)))
-       (if (not goal-node)
-         (format t "No solution was found. ~% Try relaxing your problem constraints.")
-         (form-solution goal-node nil)))))
+    (multiple-value-bind (goal-node expand-count)
+      (search-helper prp (list root) qing-fun 0)
+      (if (not goal-node)
+        (format t "No solution was found. ~% Try relaxing your problem constraints.")
+        (values (form-solution goal-node nil)
+                expand-count
+                (node-cost goal-node))))))
+
 
 ;; =========================================
 
 ;; Helper Functions
 ;; =========================================
 
-(defun search-helper (prp queue qing-fun)
+(defun search-helper (prp queue qing-fun expand-count)
   (if (null queue)
-    nil
+    (values nil expand-count)
     (let ((head (car queue)))
       (if (funcall (search-goalp prp) (node-state head))
-        head 
+        (values head expand-count) 
         (search-helper prp
                        (funcall qing-fun 
                                 (cdr queue) 
                                 (expand head (search-ops prp) (search-cost prp)))
-                       qing-fun)))))
+                       qing-fun
+                       (1+ expand-count))))))
 
 (defun expand (head operators costfun)
   (if (null operators)
@@ -76,7 +102,7 @@
     op-list
     (form-solution (node-parent n) (cons (node-operator n) op-list))))
 
-(defun show-sol (s0 sol &optional (print-fun #'print))
+(defun show-solution (s0 sol &optional (print-fun #'print))
   (format t "initial ~%")
   (funcall print-fun s0)
   (read-char)
