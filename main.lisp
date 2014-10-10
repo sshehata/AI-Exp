@@ -35,7 +35,7 @@
   (let ((root (make-node :state (initial-state prp)
                          :depth 0
                          :cost  0)))
-    (let ((goal-node (search-helper (prp (list root) qing-fun))))
+    (let ((goal-node (search-helper prp (list root) qing-fun)))
        (if (not goal-node)
          (format t "No solution was found. ~% Try relaxing your problem constraints.")
          (form-solution goal-node nil)))))
@@ -49,7 +49,7 @@
   (if (null queue)
     nil
     (let ((head (car queue)))
-      (if (funcall (search-goalp prp) head)
+      (if (funcall (search-goalp prp) (node-state head))
         head 
         (search-helper prp
                        (funcall qing-fun 
@@ -58,17 +58,31 @@
                        qing-fun)))))
 
 (defun expand (head operators costfun)
-  (mapcar #'(lambda (op) (let ((new-cost 0)
-                               (new-state nil))
-                           (setf (values new-state new-cost) (funcall op (node-state head)))
-                           (make-node :state    new-state
-                                      :parent   head
-                                      :operator op
-                                      :depth    (+ (node-depth head) 1)
-                                      :cost     (funcall costfun (node-cost head) new-cost))))
-          operators))
+  (if (null operators)
+    nil
+    (multiple-value-bind (new-state new-cost) 
+      (funcall (car operators) (node-state head))
+      (if (null new-state)
+        (expand head (cdr operators) costfun)
+        (cons (make-node :state new-state
+                         :parent head
+                         :operator (car operators)
+                         :depth (1+ (node-depth head))
+                         :cost (funcall costfun (node-cost head) new-cost))
+              (expand head (cdr operators) costfun))))))
 
-(defun form-solution (node op-list)
+(defun form-solution (n op-list)
   (if (null (node-parent n))
     op-list
     (form-solution (node-parent n) (cons (node-operator n) op-list))))
+
+(defun show-sol (s0 sol &optional (print-fun #'print))
+  (format t "initial ~%")
+  (funcall print-fun s0)
+  (read-char)
+  (loop for op in sol
+        do 
+        (format t "~A ~%" op)
+        (setf s0 (funcall op s0))
+        (funcall print-fun s0)
+        (read-char)))

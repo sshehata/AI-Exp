@@ -68,6 +68,9 @@
         (if (> el (grid-max g))
           (setf (grid-max g) el))))))
 
+(defmethod eqlp ((g1 grid) (g2 grid))
+  (equalp (grid-blocks g1) (grid-blocks g2)))
+
 ;; Operators
 ;; ==========================================
 
@@ -75,6 +78,8 @@
   (defparameter *cost* 0)
   (let ((g2 (make-instance 'grid :size (grid-size g)))) 
     (setf (grid-blocks g2) (toarray (mapcar #'collect-right (listify2d (grid-blocks g)))))
+    (if (eqlp g2 g)
+      (return-from grid-right nil))
     (grid-update g2)
     (grid-find-max g2)
     (values-list (list g2 *cost*))))
@@ -83,6 +88,8 @@
   (defparameter *cost* 0)
   (let ((g2 (make-instance 'grid :size (grid-size g)))) 
     (setf (grid-blocks g2) (toarray (mapcar #'collect-left (listify2d (grid-blocks g)))))
+    (if (eqlp g2 g)
+      (return-from grid-left nil))
     (grid-update g2)
     (grid-find-max g2)
     (values-list (list g2 *cost*))))
@@ -92,6 +99,8 @@
   (let ((g2 (make-instance 'grid :size (grid-size g)))) 
     (setf (grid-blocks g2) 
           (toarray (rotate (mapcar #'collect-left (rotate (listify2d (grid-blocks g)))))))
+    (if (eqlp g2 g)
+      (return-from grid-up nil))
     (grid-update g2)
     (grid-find-max g2)
     (values-list (list g2 *cost*))))
@@ -101,6 +110,8 @@
   (let ((g2 (make-instance 'grid :size (grid-size g)))) 
     (setf (grid-blocks g2)
           (toarray (rotate (mapcar #'collect-right (rotate (listify2d (grid-blocks g)))))))
+    (if (eqlp g2 g)
+      (return-from grid-down nil))
     (grid-update g2)
     (grid-find-max g2)
     (values-list (list g2 *cost*))))
@@ -112,13 +123,13 @@
   (apply #'mapcar #'list l))
 
 (defun collect-left (row)
-  (let ((len (length row))
-        (merged (pairwise-merge (reverse row))))
+    (let ((len (length row))
+        (merged (pairwise-merge row)))
     (append merged (make-list (- len (length merged)) :initial-element 0))))
 
 (defun collect-right (row)
   (let ((len (length row))
-        (merged (reverse (pairwise-merge (reverse row)))))
+        (merged (reverse (pairwise-merge (reverse row)))))   ; could use just one reverse
     (append (make-list (- len (length merged)) :initial-element 0) merged)))
 
 (defun pairwise-merge (l)
