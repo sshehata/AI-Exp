@@ -7,6 +7,7 @@
 ; named Search_ because we can not override the
 ; predefined search function
 (defun Search_ (grid M strategy visualise)
+  (setf target M)
   (labels ((goalp (g) (eql (grid-max g) M)))
     (let* ((ops '(grid-up grid-down grid-left grid-right))
            (prp (make-instance 'search-p :operators ops
@@ -57,7 +58,7 @@
                          :depth 0
                          :cost  0)))
     (multiple-value-bind (goal-node expand-count)
-      (search-helper prp (list root) qing-fun 0)
+      (search-helper prp (list root) qing-fun)
       (if (not goal-node)
         (format t "No solution was found. ~% Try relaxing your problem constraints.")
         (values (form-solution goal-node nil)
@@ -70,18 +71,15 @@
 ;; Helper Functions
 ;; =========================================
 
-(defun search-helper (prp queue qing-fun expand-count)
-  (if (null queue)
-    (values nil expand-count)
-    (let ((head (car queue)))
-      (if (funcall (search-goalp prp) (node-state head))
-        (values head expand-count) 
-        (search-helper prp
-                       (funcall qing-fun 
-                                (cdr queue) 
-                                (expand head (search-ops prp) (search-cost prp)))
-                       qing-fun
-                       (1+ expand-count))))))
+(defun search-helper (prp queue qing-fun)
+  (do ((expand-count 0 (1+ expand-count))
+       (q queue (funcall qing-fun 
+                         (cdr q)
+                         (expand (car q) (search-ops prp)
+                                 (search-cost prp)))))
+    ((null q) (values nil expand-count))
+    (if (funcall (search-goalp prp) (node-state (car q)))
+      (return-from search-helper (values (car q) expand-count)))))
 
 (defun expand (head operators costfun)
   (if (null operators)
