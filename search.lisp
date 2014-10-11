@@ -2,16 +2,37 @@
 ;; ========================================
 
 (defun bf (queue new-list)
-  (append queue new-list))
+  (append (cdr queue) new-list))
 
 (defun df (queue new-list)
-  (append new-list queue))
+  (append new-list (cdr queue)))
 
 (defun gr1 (queue new-list)
-  (apply-heuristic queue new-list #'h1))
+  (apply-heuristic (cdr queue) new-list #'h1))
 
 (defun gr2 (queue new-list)
-  (apply-heuristic queue new-list #'h2))
+  (apply-heuristic (cdr queue) new-list #'h2))
+
+(defun id (queue new-list)
+  (if (not (boundp 'tree-root))
+    (progn (setf tree-root (car queue))
+           (setf  depth 0)
+           (setf stop T)))
+  (if (and (not (null new-list))
+           (> (node-depth (car new-list)) depth))
+    (progn (setf stop nil)
+           (setf queue (cdr queue)))
+    (setf queue (append new-list (cdr queue))))
+  (if (and (null queue) (not stop))
+    (progn (setf depth (1+ depth))
+           (setf stop T)
+           (list tree-root))
+    (if (and (null queue) stop)
+      (progn (makunbound 'tree-root)
+             (makunbound 'depth)
+             (makunbound 'stop)
+             queue)
+      queue)))
 
 ;; ========================================
 

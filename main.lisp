@@ -9,7 +9,7 @@
 (defun Search_ (grid M strategy visualise)
   (setf target M)
   (labels ((goalp (g) (eql (grid-max g) M)))
-    (let* ((ops '(grid-up grid-down grid-left grid-right))
+    (let* ((ops '(grid-up grid-left grid-down grid-right))
            (prp (make-instance 'search-p :operators ops
                                          :initial   grid
                                          :goalp     #'goalp
@@ -74,12 +74,14 @@
 (defun search-helper (prp queue qing-fun)
   (do ((expand-count 0 (1+ expand-count))
        (q queue (funcall qing-fun 
-                         (cdr q)
+                         q
                          (expand (car q) (search-ops prp)
                                  (search-cost prp)))))
     ((null q) (values nil expand-count))
     (if (funcall (search-goalp prp) (node-state (car q)))
-      (return-from search-helper (values (car q) expand-count)))))
+      (return-from search-helper (values (car q) expand-count)))
+    (if (zerop (mod expand-count 10000))
+      (format t "---- expanded ~A ----~%" expand-count))))
 
 (defun expand (head operators costfun)
   (if (null operators)
