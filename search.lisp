@@ -27,12 +27,11 @@
     (progn (setf depth (1+ depth))
            (setf stop T)
            (list tree-root))
-    (if (and (null queue) stop)
-      (progn (makunbound 'tree-root)
-             (makunbound 'depth)
-             (makunbound 'stop)
-             queue)
-      queue)))
+    queue))
+
+(defun as1 (queue new-list)
+  (apply-heuristic (cdr queue) new-list #'h1a)
+  )
 
 ;; ========================================
 
@@ -40,17 +39,7 @@
 ;; ========================================
 
 (defun apply-heuristic (queue new-list h)
-  (if (null new-list)
-    queue
-    (let ((new-queue (insert-sorted queue (car new-list) h)))
-      (apply-heuristic new-queue (cdr new-list) h))))
-
-(defun insert-sorted (queue node betterp)
-  (if (null queue)
-    (list node)
-    (if (funcall betterp node (car queue))
-      (cons node queue)
-      (cons (car queue) (insert-sorted (cdr queue) node betterp)))))
+  (merge-sort (append queue new-list) h))
 
 (defun h1 (n1 n2)
   (let ((max1 (grid-max (node-state n1)))
@@ -60,9 +49,37 @@
           (dist2 (log max2 2)))
       (< (- maxdist dist1) (- maxdist dist2)))))
 
+(defun h1a (n1 n2)
+  (let ((max1 (grid-max (node-state n1)))
+        (max2 (grid-max (node-state n2)))
+        (maxdist (log target 2)))
+    (let ((dist1 (log max1 2))
+          (dist2 (log max2 2)))
+      (< (+ (- maxdist dist1) (node-cost n1))
+         (+ (- maxdist dist2) (node-cost n2))))))
+
 (defun h2 (n1 n2)
   (let ((max1 (grid-max (node-state n1)))
         (max2 (grid-max (node-state n2))))
     (let ((dist1 (/ (- target max1) 2))
           (dist2 (/ (- target max2) 2)))
       (< dist1 dist2))))
+
+(defun merge-sort (list cmp)
+  (if (small list) list
+    (merge-lists
+      (merge-sort (left-half list) cmp)
+      (merge-sort (right-half list) cmp)
+      cmp)))
+
+(defun small (list)
+  (or (eq (length list) 0) (eq (length list) 1)))
+
+
+(defun right-half (list)
+  (last list (ceiling (/ (length list) 2))))
+(defun left-half (list)
+  (ldiff list (right-half list)))
+
+(defun merge-lists (list1 list2 cmp)
+  (merge 'list list1 list2 cmp))
