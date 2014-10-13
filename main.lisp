@@ -18,7 +18,7 @@
         (general-search prp strategy)
         (if visualise
           (show-solution grid sol #'grid-display))   
-        (makunbound 'tree-root)                             ;cleaning up, please ignore
+        (cleanup)
         (list sol sol-cost expand-count)))))
 
 ;; =========================================
@@ -113,3 +113,10 @@
         (setf s0 (funcall op s0))
         (funcall print-fun s0)
         (read-char)))
+
+(defun cleanup ()
+  (makunbound 'target)
+  (makunbound '*cost*)
+  (makunbound 'tree-root)
+  (makunbound 'depth)
+  (makunbound 'stop))
