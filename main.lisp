@@ -81,17 +81,7 @@
     ((null q) (values nil expand-count))
     (if (funcall (search-goalp prp) (node-state (car q)))
       (return-from search-helper (values (car q) expand-count)))
-    (if (zerop (mod expand-count 10000)(defun search-helper (prp queue qing-fun)
-  (do ((expand-count 0 (1+ expand-count))
-       (q queue (funcall qing-fun 
-                         q
-                         (expand (car q) (search-ops prp)
-                                 (search-cost prp)))))
-    ((null q) (values nil expand-count))
-    (if (funcall (search-goalp prp) (node-state (car q)))
-      (return-from search-helper (values (car q) expand-count)))
-    (if (zerop (mod expand-count 1))
-      (format t "---- expanded ~A ----~%" expand-count)))))
+    (if (zerop (mod expand-count 10000))
       (format t "---- expanded ~A ----~%" expand-count))))
 
 (defun expand (head operators costfun)
