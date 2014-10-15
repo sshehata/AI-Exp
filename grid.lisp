@@ -81,7 +81,7 @@
       (return-from grid-right nil))
     (grid-update g2)
     (grid-find-max g2)
-    (values-list (list g2 *cost*))))
+    (values g2 *cost* )))
 
 (defmethod grid-left ((g grid))
   (defparameter *cost* 0)
@@ -92,7 +92,7 @@
       (return-from grid-left nil))
     (grid-update g2)
     (grid-find-max g2)
-    (values-list (list g2 *cost*))))
+    (values g2 *cost* )))
 
 (defmethod grid-up ((g grid))
   (defparameter *cost* 0)
@@ -102,7 +102,7 @@
       (return-from grid-up nil))
     (grid-update g2)
     (grid-find-max g2)
-    (values-list (list g2 *cost*))))
+    (values g2 *cost* )))
 
 (defmethod grid-down ((g grid))
   (defparameter *cost* 0)
@@ -112,7 +112,7 @@
       (return-from grid-down nil))
     (grid-update g2)
     (grid-find-max g2)
-    (values-list (list g2 *cost*))))
+    (values g2 *cost* )))
 
 ;; Helper Functions
 ;; ==========================================
