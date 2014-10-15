@@ -1,0 +1,387 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% LaTeX Example: Project Report
+%
+% Source: http://www.howtotex.com
+%
+% Feel free to distribute this example, but please keep the referral
+% to howtotex.com
+% Date: March 2011 
+% 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% How to use writeLaTeX: 
+%
+% You edit the source code here on the left, and the preview on the
+% right shows you the result within a few seconds.
+%
+% Bookmark this page and share the URL with your co-authors. They can
+% edit at the same time!
+%
+% You can upload figures, bibliographies, custom classes and
+% styles using the files menu.
+%
+% If you're new to LaTeX, the wikibook is a great place to start:
+% http://en.wikibooks.org/wiki/LaTeX
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Edit the title below to update the display in My Documents
+%\title{Project Report}
+%
+%%% Preamble
+\documentclass[paper=a4, fontsize=11pt]{scrartcl}
+\usepackage[T1]{fontenc}
+\usepackage{fourier}
+
+\usepackage[english]{babel}															% English language/hyphenation
+\usepackage[protrusion=true,expansion=true]{microtype}	
+\usepackage{amsmath,amsfonts,amsthm} % Math packages
+\usepackage[pdftex]{graphicx}	
+\usepackage{url}
+
+
+%%% Custom sectioning
+\usepackage{sectsty}
+\allsectionsfont{\centering \normalfont\scshape}
+
+
+%%% Custom headers/footers (fancyhdr package)
+\usepackage{fancyhdr}
+\pagestyle{fancyplain}
+\fancyhead{}											% No page header
+\fancyfoot[L]{}											% Empty 
+\fancyfoot[C]{}											% Empty
+\fancyfoot[R]{\thepage}									% Pagenumbering
+\renewcommand{\headrulewidth}{0pt}			% Remove header underlines
+\renewcommand{\footrulewidth}{0pt}				% Remove footer underlines
+\setlength{\headheight}{13.6pt}
+
+
+%%% Equation and float numbering
+\numberwithin{equation}{section}		% Equationnumbering: section.eq#
+\numberwithin{figure}{section}			% Figurenumbering: section.fig#
+\numberwithin{table}{section}				% Tablenumbering: section.tab#
+
+
+%%% Maketitle metadata
+\newcommand{\horrule}[1]{\rule{\linewidth}{#1}} 	% Horizontal rule
+
+\title{
+		%\vspace{-1in} 	
+		\usefont{OT1}{bch}{b}{n}
+		\normalfont \normalsize \textsc{} \\ [25pt]
+		\horrule{0.5pt} \\[0.4cm]
+		\huge 2048-solver Project report \\
+		\horrule{2pt} \\[0.5cm]
+}
+\author{
+		\normalfont 								\normalsize
+        Samy Shehata 22-3798\\[-3pt]		\normalsize
+        Omar Mahmoud \\[-3pt]		\normalsize
+        Karim Tarek \\[-3pt]		\normalsize
+        \today
+}
+\date{}
+
+
+%%% Begin document
+\begin{document}
+\maketitle
+\section{The 2048 Problem}
+This project is an Artificial Intelligence solver for 2048 game. 2048 is a board game with 4*4 blocks. Intially the  board has two random blocks having the value of 2, the rest of the grid is empty. The game has four operaters : Left, Up, Right and Down. Each one of these operators moves all the blocks on the board in a certain direction. If two blocks with the same values collide, a new block is generated with the a value equal to their sum and the old blocks are removed. After each move a block with the value 2 will be placed randomly in any empty place in the board. The goal of the game is to reach a block with the value 2048. The user will lose the game if no moves will have an effect on the board. For the purpose of this project we only consider a more relaxed version of the problem. After each move a block having the value 2 is placed in the upper-left corner in the board, if the upper-left corner is not empty then it will be placed in the next corner moving clockwise. If there are no empty corners nothing will be added. This was done to eliminate the factor of randomness in the problem as the solver uses search-based algorithims. 
+
+\section{Implementation}
+\subsection{Overview}
+
+\paragraph{Search Tree Node}
+A node is an abstract data type modelled by the struct Node with the following fields:
+\begin{itemize}
+	\item{Depth:} The depth of the node in the search tree starting with depth 0 for the root.
+    \item{Cost:} The cost of reaching the node starting from the root.
+	\item{Parent:} A pointer to the parent node in the tree, nil for the root.	
+	\item{Operator:} The operator applied to the parent in order to reach the node.
+	\item{State:} The state of the problem after applying the node operator.
+\end{itemize}
+
+\paragraph{Search Problem}
+A search problem is represented by the class Search-p. It has the following members:
+\begin{itemize}
+	\item{S0:} The depth of the node in the search tree starting with depth 0 for the root.
+    \item{Operators:} a list of possible operators that can be applied to the problem state to reach the next state in the state space.
+	\item{Goal-test:} a function that can be applied to a search tree node which returns true if the node is a goal node I.e the state of the node is the target state.	
+	\item{Path-cost:} a funcation that is applied to the cost of a parent node and the cost of applyng an operator to calculate the cost of reaching a new node.
+\end{itemize}
+
+The search-p class implements the following methods: 
+
+\subparagraph{Function general-search} \mbox{} \\
+\noindent\textbf{Input}
+\begin{itemize}
+    \item{Prp:} A search-p object representing the search problem.
+    \item{qing-fun:} A function that handles the search strategy.
+\end{itemize}
+\noindent\textbf{Output}
+\begin{itemize}
+    \item{Sol:} A list of operators that form the found sol (if it exists).
+    \item{Expand-count:} The number of node expanded during search.
+    \item{Sol-cost:} The total cost of the solution returned.
+\end{itemize}
+General search creates a queue with only one node containing the initial state of the problem and then uses the the qing-fun to recursivly expand nodes and search for the goal node. Returns nil on failure of finding a solution.
+
+\paragraph{2048 Problem}
+The 2048 problem is defined by a the Grid class with the following members:
+\begin{itemize}
+    \item{Blocks:} a square two dimensional array representing the board grid. The array holds 0s for empty blocks and the value of the blocks otherwise.
+    \item{Size:} the size of the grid. Since the grid is always square, blocks are defined as a size * size array.
+    \item{Maximum:} the current largest block in the grid.
+\end{itemize}
+
+The state of the 2048 problem can be affected by four operators represented by the following member functions:
+\begin{itemize}
+    \item{Left:}Collects all grid blocks to the left.
+    \item{Right:} Collects all grid blocks to the right.
+    \item{Up:} Collects all grid blocks upwards.
+    \item{Down:} Collects all grid blocks downwards.
+\end{itemize}
+
+\subsection{Details}
+Our implementation is split into three files.
+
+
+\subsubsection{Grid.lisp}
+This file contains all functions specific to the 2048 game implementation.
+
+\subparagraph{Function GenGrid} \mbox{} \\
+\noindent\textbf{Input}
+\begin{itemize}
+    \item void
+\end{itemize}
+\noindent\textbf{Output}
+\begin{itemize}
+    \item{Grid}
+\end{itemize}
+Generates a new grid object and and adds two blocks with the value 2 in two random locations.
+
+
+\subparagraph{Function Grid-Display } \mbox{} \\
+\noindent\textbf{Input}
+\begin{itemize}
+    \item Grid
+\end{itemize}
+\noindent\textbf{Output}
+\begin{itemize}
+    \item void
+\end{itemize}
+prints the grid blocks as a square matrix.
+
+\subparagraph{Function Grid-Spawnblock } \mbox{} \\
+\noindent\textbf{Input}
+\begin{itemize}
+    \item Grid
+    \item X: The col index of the grid 
+    \item Y: The row index of the grid
+\end{itemize}
+\noindent\textbf{Output}
+\begin{itemize}
+    \item void
+\end{itemize}
+Adds a new block with the value 2 at position (x y) of the grid.
+
+\subparagraph{Function Grid-Emptyblockp } \mbox{} \\
+\noindent\textbf{Input}
+\begin{itemize}
+    \item Grid
+    \item X: The col index of the grid 
+    \item Y: The row index of the grid
+\end{itemize}
+\noindent\textbf{Output}
+\begin{itemize}
+    \item boolean
+\end{itemize}
+Returns true if the block at position (x, y) is empty.
+
+\subparagraph{Function Grid-Update } \mbox{} \\
+\noindent\textbf{Input}
+\begin{itemize}
+    \item Grid
+\end{itemize}
+\noindent\textbf{Output}
+\begin{itemize}
+    \item Void
+\end{itemize}
+Distructive function the adds new block to the array. This function is called after every operator is applied to generate the new block. It checks the four corners for the grid in order staring from the top left corner and adds the block in the first empty corner.
+
+\subparagraph{Function Grid-Find-max } \mbox{} \\
+\noindent\textbf{Input}
+\begin{itemize}
+    \item Grid
+\end{itemize}
+\noindent\textbf{Output}
+\begin{itemize}
+    \item Void
+\end{itemize}
+loops over the grid blocks and finds the current maximum block. Sets the class member ``maximum''
+
+\subparagraph{Function eqlp } \mbox{} \\
+\noindent\textbf{Input}
+\begin{itemize}
+    \item Grid1
+    \item Grid2
+\end{itemize}
+\noindent\textbf{Output}
+\begin{itemize}
+    \item boolean
+\end{itemize}
+returns true if the two grids are identical.
+
+\subparagraph{Function Grid-right, Grid-left, Grid-up, Grid-down } \mbox{} \\
+\noindent\textbf{Input}
+\begin{itemize}
+    \item Grid
+\end{itemize}
+\noindent\textbf{Output}
+\begin{itemize}
+    \item Grid
+    \item Cost: The cost of applying the operator.
+\end{itemize}
+Four functions representing the four operators that can be applied on a grid. Operators work in the same way:
+\begin{enumerate}
+	\item Create a new grid.
+    \item Set the grid blocks to the result of applying the operator to the old grid
+    \item Check if the new grid is equal to the old grid. If equal return null otherwise go to 4.
+    \item Call Grid-update to add a new block to the new grid.
+    \item Grid-find-max to find the new largest block.
+    \item Return the new grid and the score acqured from applying the operator.
+\end{enumerate}
+
+\subparagraph{Function Collect-right, Collect-left } \mbox{} \\
+\noindent\textbf{Input}
+\begin{itemize}
+    \item List
+\end{itemize}
+\noindent\textbf{Output}
+\begin{itemize}
+    \item List
+\end{itemize}
+Helper functions to the operator functions each taking a list and outputing another list after collecting all elements right and left respectively and pairwise merging equal elements (by calling pairwise merge). The list is then padded with zeroes on the edge. These functions are applied on each row for Grid-right and Grid-left. Grid-up and Grid-down use the same function while rotating the grid first.
+
+\subparagraph{Function Pairwise-merge } \mbox{} \\
+\noindent\textbf{Input}
+\begin{itemize}
+    \item List
+\end{itemize}
+\noindent\textbf{Output}
+\begin{itemize}
+    \item List
+\end{itemize}
+Helper function to collect-right and collect-left functions. Recursively filter out 0s and merge each two equal elements from left to right. \\
+e.g 2 0 2 4 -> 4 4
+
+\subsubsection{Main.lisp}
+This is the main file that contains the ADTs and the general search functions.
+
+\subparagraph{Function Search } \mbox{} \\
+\noindent\textbf{Input}
+\begin{itemize}
+    \item Grid
+    \item M: The target value of the search problem.
+    \item Strategy: The search algorithim used.
+    \item Visualise: A boolean whether to visualise solution or not.
+\end{itemize}
+\noindent\textbf{Output}
+\begin{itemize}
+    \item List: Operations that lead to the goal state. Null if goal not reached.
+    \item Expanded-count: Number of nodes expanded.
+    \item Solution-Cost: cost of the returned solution
+\end{itemize}
+The function creates search-p object from the input grid and M. It then passes the object to general-search function to find a solution. If visualise is set, the function calls show-solution function to display the steps of the found solution
+
+\subparagraph{Function general-search } \mbox{} \\
+\noindent\textbf{Input}
+\begin{itemize}
+    \item prp: A search problem
+    \item qing-fun : A function the determines the search strategy to find a solution
+\end{itemize}
+\noindent\textbf{Output}
+\begin{itemize}
+    \item Sol: a list of operators that form the found sol (if it exists).
+    \item Expanded-count: Number of nodes expanded.
+    \item Solution-Cost: cost of the returned solution
+\end{itemize}
+General search creates a queue with only one node containing the initial state of the problem and passes it to search-helper function which returns the goal node found. The function passes the goal-node to form-solution function which returns a list of the operators forming the solution starting from the root. Returns nil on failure of finding a solution.
+
+\subparagraph{Function search-helper } \mbox{} \\
+\noindent\textbf{Input}
+\begin{itemize}
+    \item prp: A search problem.
+    \item queue: A queue of the current nodes awaiting expansion
+    \item qing-fun : A function the determines the search strategy to find a solution
+\end{itemize}
+\noindent\textbf{Output}
+\begin{itemize}
+    \item goal-node: The goal node found from which the solution can be reconstructed
+    \item Expanded-count: Number of nodes expanded.
+\end{itemize}
+Iteratively expands the nodes in the queue and adds the generated children using the quing function. First the function checks if the head of the queue is goal node. If true the function returns it with the number of nodes expanded. Otherwise the function passes the head of the queue to the Expand function  which returns a list with the children of the node. Then the function applies quing-fun to both the current queue and the children list. The function fails when the queue is empty.
+
+\subparagraph{Function form-solution } \mbox{} \\
+\noindent\textbf{Input}
+\begin{itemize}
+    \item n: The goal node.
+\end{itemize}
+\noindent\textbf{Output}
+\begin{itemize}
+    \item op-list: List of operaters that start from the root to form the solution.
+\end{itemize}
+The function check if n is the root. If this is the case, op-list will be returned. Else the operater of n will be concatenated to op-list and the function will be called recursivly on the parent of n and the new op-list.
+
+\subparagraph{Function form-solution } \mbox{} \\
+\noindent\textbf{Input}
+\begin{itemize}
+    \item  s0: The initial state.
+    \item Sol: List of operators to reach the goal state.
+    \item Print-fun: Function to be used to display the state.
+\end{itemize}
+\noindent\textbf{Output}
+\begin{itemize}
+    \item void
+\end{itemize}
+Iterates on the list of operaters uplying them to the initial state till reaching the goal state. Uses print-fun to print each new state.
+
+\subsection{Search.lisp}
+This file has the functions that implements the different search strategies.
+
+All search strategies are implemented as functions that take a queue and a new list. The queue is the set of nodes to be expanded and the new list is the nodes newly generated from expanding a node.
+
+\subparagraph{Breadth first search (bf)}
+The new list gets appended to the end of the queue.
+
+\subparagraph{Depth first search (df)}
+The new list gets appended to the beging of the queue.
+
+\subparagraph{Iterative Depth (id)}
+Applys Df until a cut-off depth then the depth is incremented and Dfs is restarted. ID terminates when no nodes generated exceed the cutoff depth.
+
+\subparagraph{A* (as1, as2)}
+Applies a merge sort between the queue and the new list according to a given heuristic.
+A* Heurisitcs consider the cost of the path already traversed as well as the expected
+cost to the goal.
+
+\subparagraph{Greedy (gr1, gr2)}
+Applies a merge sort between the queue and the new list according to a given heuristic.
+
+\subsection{Heuristics}
+Heuristics are implemented as a comparison function between two nodes n1, n2. The Heuristic should return true if n1 is ``better'' than n2. This is used by merge sort to order the nodes better to worse.
+
+\subparagraph{h1} Consideres the number of doubles needed to get the current maximum block of the grid to the target block. This heuristics is admissible, however, it is a poor estimation as it returns values much smaller than the actual cost.
+
+\subparagraph{h2}
+Consideres the score that will be accumilated from doubling the current maximum block till it reaches the largest block.
+This heurisitic is admissible and it dominates h1 which is why it is a better estimation of the expected cost to reach the node.
+ 
+\subparagraph{h3}
+Consideres the number of combination moves that are needed to reach the target block, assuming that only the current maximum block exists in the grid.
+Not admissible as it ignores the other blocks existing in the grid which may reduce the actual cost of reaching the node.
+
+\section{Performance Comparison}
+
+%%% End document
+\end{document}
