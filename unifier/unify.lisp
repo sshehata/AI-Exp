@@ -1,0 +1,3 @@
+(defstruct predicate
+  sym
+  )
