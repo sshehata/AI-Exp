@@ -12,7 +12,7 @@
 
 (defstruct fail)
 
-(defun unify (E1 E2)
+(defun Unify (E1 E2)
   (unify1 E1 E2 nil))
 
 (defun unify1 (E1 E2 mu)
