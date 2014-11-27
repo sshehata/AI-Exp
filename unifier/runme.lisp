@@ -1,4 +1,4 @@
-(load "main.lisp")
+(load "unifier.lisp")
 (load "clause-form.lisp")
 
 (setf t1 (list (make-predicate :sym #\P)
@@ -11,12 +11,41 @@
 
 (setf t2 (list (make-predicate :sym #\P)
                (list (make-predicate :sym #\f)
+                     (make-lvar :sym #\u))
+               (make-lvar :sym #\v)
+               (make-lvar :sym #\v)))
+
+(format t "final: ~A ~%" (Unify t1 t2)) 
+
+(setf t3 (list (make-predicate :sym #\P )
+               (make-constant :sym #\a)
+               (make-lvar :sym #\y)
+               (list (make-predicate :sym #\f)
+                     (make-lvar :sym #\y))))
+
+(setf t4 (list (make-predicate :sym #\P)
+               (make-lvar :sym #\z)
+               (make-lvar :sym #\z)
+               (make-lvar :sym #\u)))
+
+(format t "final: ~A ~%" (Unify t3 t4)) 
+
+(setf t5 (list (make-predicate :sym #\f)
+               (make-lvar :sym #\x)
+               (list (make-predicate :sym #\g)
+                     (make-lvar :sym #\x))
+               (make-lvar :sym #\y)))
+
+(setf t6 (list (make-predicate :sym #\f) 
+           (list (make-predicate :sym #\g)
                      (make-lvar :sym #\u)
                      )
-               (make-lvar :sym #\v)
-               (make-lvar :sym #\v) ))
-
-(format t "final: ~A ~%" (unify t1 t2)) 
+           (list (make-predicate :sym #\g)
+                 (list (make-predicate :sym #\g)
+                       (make-lvar :sym #\z)
+                       )
+                 ) 
+           (make-lvar :sym #\y) ))
 
 (setf x (list (make-land) 
               (list (make-land) 
