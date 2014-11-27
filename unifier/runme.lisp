@@ -34,7 +34,7 @@
                (make-lvar :sym #\x)
                (list (make-predicate :sym #\g)
                      (make-lvar :sym #\x))
-               (make-lvar :sym #\y)))
+               (make-lvar :sym #\x)))
 
 (setf t6 (list (make-predicate :sym #\f) 
            (list (make-predicate :sym #\g)
@@ -42,10 +42,8 @@
                      )
            (list (make-predicate :sym #\g)
                  (list (make-predicate :sym #\g)
-                       (make-lvar :sym #\z)
-                       )
-                 ) 
-           (make-lvar :sym #\y) ))
+                       (make-lvar :sym #\z))) 
+           (make-lvar :sym #\z)))
 
 (setf x (list (make-land) 
               (list (make-land) 

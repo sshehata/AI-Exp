@@ -21,16 +21,30 @@
 ;; ============= TOP LEVEL FUNCTION ========
 ;; =========================================
 
-(defun ClauseForm (expr)
- (rename-clauses 
-   (clauses 
-     (flatten 
-       (discard-forall 
-         (skolemize 
-           (standarise-apart 
-             (push-not 
-               (remove-impl 
-                 (remove-eql expr))))))))))
+(defun ClauseForm (expr visual)
+  (let ((clause-form (remove-eql expr)))
+    (visualise clause-form visual)
+    (setf clause-form (remove-impl clause-form))
+    (visualise clause-form visual )
+    (setf clause-form (push-not clause-form))
+    (visualise clause-form visual )
+    (setf clause-form (standarise-apart clause-form))
+    (visualise clause-form visual )
+    (setf clause-form (skolemize clause-form))
+    (visualise clause-form visual )
+    (setf clause-form (discard-forall clause-form))
+    (visualise clause-form visual )
+    (setf clause-form (flatten clause-form))
+    (visualise clause-form visual )
+    (setf clause-form (clauses clause-form))
+    (setf clause-form (rename-clauses clause-form))
+    (print-clause-form clause-form)))
+
+(defun visualise (expr visual)
+  (if visual
+    (progn 
+    (format t "~A ~%" (print-fol expr)) 
+      (read-char))))
 
 
 ;; =========================================
@@ -85,7 +99,7 @@
     (if (latom-p operator)
       expr
       (if (forall-p operator)
-       (car (cdr expr))
+        (car (cdr expr))
         (apply-on-operands operator (cdr expr) #'discard-forall)))))
 
 
@@ -96,7 +110,7 @@
       (if (land-p operator)
         (append (list (make-land)) (mapcan #'flatten-and (mapcar #'flatten (cdr expr))))
         (if (lor-p operator)
-         (flatten-or (mapcar #'flatten (cdr expr))))))))
+          (flatten-or (mapcar #'flatten (cdr expr))))))))
 
 (defun clauses (expr)
   (if (latom-p (car expr))
@@ -266,3 +280,49 @@
     (if (equalp (pair-sym (car pairs)) expr)
       (pair-repl (car pairs))
       (replacedp expr (cdr pairs)))))
+
+;; =========================================
+;; ============= PRINTING ==================
+;; =========================================
+
+(defun print-fol (expr)
+  (if (consp expr)
+    (let ((operands (mapcar #'print-fol (cdr expr))))
+      (if (land-p (car expr))
+        (format nil "(~{~A~^ & ~})" operands)
+        (if (lor-p (car expr))
+          (format nil "(~{~A~^ v ~})" operands)
+          (if (limpl-p (car expr))
+            (format nil "(~{A~^ impl ~})" operands)
+            (if (leq-p (car expr))
+              (format nil "(~{A^ eq ~})" operands)
+              (if (forall-p (car expr))
+                (format nil "forall ~A [ ~{~A~} ]"
+                        (forall-sym (car expr))
+                        operands)
+                (if (there-exists-p (car expr))
+                  (format nil "there-exists ~A [ ~{~A~} ]" 
+                          (there-exists-sym (car expr))
+                          operands)
+                  (if (latom-p (car expr))
+                    (format nil "~A(~{~A~^,~})"
+                            (latom-sym (car expr))
+                            operands)))))))))
+    (format nil "~C" expr)))
+
+(defun print-clause-form (expr)
+  (format nil "{ ~{{ ~A }~^, ~}  }"
+          (mapcar #'print-clause expr)))
+
+(defun print-clause (expr)
+  (if (listp (car expr))
+    (format nil "~{~A~^, ~}"
+            (mapcar #'print-atom expr)) 
+    (print-atom expr)))
+
+(defun print-atom (expr)
+  (if (consp expr)
+    (format nil "~A(~{~A~^, ~})"
+            (latom-sym (car expr))
+            (mapcar #'print-atom (cdr expr)))
+    (format nil "~C" expr)))

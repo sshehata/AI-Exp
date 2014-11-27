@@ -1,3 +1,7 @@
+;; =========================================
+;; ============= DATA TYPES ================
+;; =========================================
+
 (defstruct predicate
   sym) 
 
@@ -7,10 +11,20 @@
 (defstruct lvar 
   sym)
 
-(defstruct binding 
+(defstruct (binding
+             (:print-function
+               (lambda (struct stream depth)
+                 (declare (ignore depth))
+                 (format stream "{~A / ~A}" 
+                         (print-expr (binding-term struct))
+                         (print-expr (binding-lvar struct)))))) 
   term lvar)
 
 (defstruct fail)
+
+;; =========================================
+;; ============= TOP LEVEL FUNCTION ========
+;; =========================================
 
 (defun Unify (E1 E2)
   (unify1 E1 E2 nil))
@@ -39,41 +53,62 @@
   (unify1 (cdr E1) (cdr E2) (unify1 (car E1) (car E2) mu)))
 
 (defun unify-var (x e mu)
-  (let ((term (bound-p x mu)))
-    (if term
-      (return-from unify-var (unify1 term e mu)))
-    (if (listp e)
-      (setf term (ground mu e))
-      (setf term e))
-    (if (listp term)
-      (if (occurs-p x term)
-        (return-from unify-var (make-fail))))
-    (cons (make-binding :term term :lvar x) mu)))
+  (let ((binding (bound-p x mu)))
+    (if binding 
+      (unify1 (binding-term binding) e mu)
+      (progn
+        (let ((term (ground mu e)))
+          (if (occurs-p x term)
+            (make-fail) 
+            (let ((new-mu (list (make-binding :term term :lvar x ))))
+              (append (update-mu new-mu mu) new-mu))))))))
+
+;; =========================================
+;; ========== HELPER FUNCTIONS =============
+;; =========================================
 
 (defun atomp (E1)
   (or (predicate-p E1)
       (constant-p E1)))
 
 (defun bound-p (x mu)
-  (if (null mu)
-    nil
-    (if (equalp (binding-lvar (car mu)) x)
-      (binding-term (car mu))
-      (bound-p x (cdr mu)))))
+  (find-if #'(lambda (e)
+               (equalp (binding-lvar e) x))
+           mu))
 
 (defun ground (mu e)
-  (if (null e)
-    nil
-    (if (not (atomp (car e)))
-      (let ((term (bound-p (car e) mu)))
-        (if term
-          (cons term (ground mu (cdr e)))
-          (cons (car e) (ground mu (cdr e)))))
-      (cons (car e) (ground mu (cdr e))))))
+  (if (consp e)
+    (cons (ground mu (car e))
+          (ground mu (cdr e)))
+    (if (lvar-p e)
+      (let ((binding (bound-p e mu)))
+        (if binding
+          (binding-term binding)
+          e))
+      e)))
 
 (defun occurs-p (x term)
-  (if (null term)
-    nil
-    (if (equalp (car term) x)
-      T
-      (occurs-p x (cdr term)))))
+  (if (consp term)
+    (or (occurs-p x (car term))
+         (occurs-p x (cdr term)))
+    (equalp x term)))
+
+(defun update-mu (new-mu mu)
+  (mapcar #'(lambda (binding)
+              (make-binding :term (ground new-mu (binding-term binding))
+                            :lvar (binding-lvar binding)))
+          mu))
+
+
+;; =========================================
+;; ============= PRINTING ==================
+;; =========================================
+
+(defun print-expr (expr)
+  (if (consp expr)
+    (format nil "~A(~{~A~^, ~})" (predicate-sym (car expr))
+            (mapcar #'print-expr (cdr expr)))
+    (if (constant-p expr)
+      (format nil "~C" (constant-sym expr))
+      (format nil "~C" (lvar-sym expr)))))
+
