@@ -15,7 +15,7 @@
                (make-lvar :sym #\v)
                (make-lvar :sym #\v)))
 
-(format t "final: ~A ~%" (Unify t1 t2)) 
+(format t "unification 1: ~A ~%" (Unify t1 t2)) 
 
 (setf t3 (list (make-predicate :sym #\P )
                (make-constant :sym #\a)
@@ -28,7 +28,7 @@
                (make-lvar :sym #\z)
                (make-lvar :sym #\u)))
 
-(format t "final: ~A ~%" (Unify t3 t4)) 
+(format t "unification 2: ~A ~%" (Unify t3 t4)) 
 
 (setf t5 (list (make-predicate :sym #\f)
                (make-lvar :sym #\x)
@@ -45,20 +45,38 @@
                        (make-lvar :sym #\z))) 
            (make-lvar :sym #\z)))
 
-(setf x (list (make-land) 
-              (list (make-land) 
-                    (list (make-latom :sym #\P) 
-                                      #\x 
-                                      #\y)
-                    (list (make-latom :sym #\Q) 
-                          #\x))
-              (list (make-latom :sym #\N) 
-                    #\x)
-              (list (make-lor) 
-                    (list (make-latom :sym #\D) 
-                          #\a)
-                    (list (make-latom :sym #\V)
-                          #\b))
-              (list (make-latom :sym #\D)
-                    #\x)))
-(format t "~A ~%" (flatten x))
+
+(format t "unification 3: ~A ~%" (Unify t3 t4))
+
+(setf y (list (make-there-exists :sym #\x)
+              (list (make-land)
+                    (list (make-latom :sym #\P)
+                          #\x)
+                    (list (make-forall :sym #\x)
+                          (list (make-limpl)
+                                (list (make-latom :sym #\Q)
+                                      #\x)
+                                (list (make-lnot)
+                                      (list (make-latom :sym #\P)
+                                            #\x
+                                            )))))))
+
+(format t "clause-form 1: ~A ~%" (ClauseForm y))
+
+(setf z (list (make-forall :sym #\x)
+              (list (make-leq)
+                    (list (make-latom :sym #\P)
+                          #\x)
+                    (list (make-land)
+                          (list (make-latom :sym #\Q)
+                                #\x)
+                          (list (make-there-exists :sym #\y)
+                                (list (make-land)
+                                      (list (make-latom :sym #\Q)
+                                            #\y)
+                                      (list (make-latom :sym #\R)
+                                            #\y
+                                            #\x)))))))
+
+(format t "clause-form 2: ~A ~%" (ClauseForm z))
+

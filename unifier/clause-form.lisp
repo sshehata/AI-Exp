@@ -21,29 +21,28 @@
 ;; ============= TOP LEVEL FUNCTION ========
 ;; =========================================
 
-(defun ClauseForm (expr visual)
-  (let ((clause-form (remove-eql expr)))
-    (visualise clause-form visual)
-    (setf clause-form (remove-impl clause-form))
-    (visualise clause-form visual )
-    (setf clause-form (push-not clause-form))
-    (visualise clause-form visual )
-    (setf clause-form (standarise-apart clause-form))
-    (visualise clause-form visual )
-    (setf clause-form (skolemize clause-form))
-    (visualise clause-form visual )
-    (setf clause-form (discard-forall clause-form))
-    (visualise clause-form visual )
-    (setf clause-form (flatten clause-form))
-    (visualise clause-form visual )
-    (setf clause-form (clauses clause-form))
-    (setf clause-form (rename-clauses clause-form))
-    (print-clause-form clause-form)))
+(defun ClauseForm (expr &optional visual)
+  (visualise "Input" expr visual #'print-fol)
+  (mapc #'(lambda (x)
+            (setf expr (funcall x expr))
+            (visualise x expr visual #'print-fol))
+        '(remove-eql
+           remove-impl
+           push-not
+           standarise-apart
+           skolemize
+           discard-forall
+           flatten))
+  (setf expr (clauses expr))
+  (visualise 'clauses expr visual #'print-clause-form)
+  (setf expr (rename-clauses expr))
+  (format t "STANDARISE-APART-CLAUSES:~%~A ~%" 
+          (print-clause-form expr)))
 
-(defun visualise (expr visual)
+(defun visualise (name expr visual fun)
   (if visual
     (progn 
-    (format t "~A ~%" (print-fol expr)) 
+    (format t "~A:~%~A ~%" name (funcall fun expr)) 
       (read-char))))
 
 
@@ -56,70 +55,78 @@
     expr
     (let ((operator (car expr)))
       (if (leq-p operator)
-        (let ((left-side (remove-eql (car (cdr expr))))
-              (right-side (remove-eql (car (cdr (cdr expr))))))
+        (let ((left-side (remove-eql (second expr)))
+              (right-side (remove-eql (third expr))))
           (list (make-land) 
                 (list (make-limpl) left-side right-side)
                 (list (make-limpl) right-side left-side)))
-        (apply-on-operands operator (cdr expr) #'remove-eql)))))
+        (cons operator (mapcar #'remove-eql (cdr expr)))))))
 
 (defun remove-impl (expr)
   (if (not (listp expr))
     expr
     (let ((operator (car expr)))
       (if (limpl-p operator)
-        (let ((left-side (remove-impl (car (cdr expr))))
-              (right-side (remove-impl (car (cdr (cdr expr))))))
+        (let ((left-side (remove-impl (second expr)))
+              (right-side (remove-impl (third expr))))
           (list (make-lor) 
                 (list (make-lnot) left-side)
                 right-side))
-        (apply-on-operands operator (cdr expr) #'remove-impl)))))
+        (cons operator (mapcar #'remove-impl (cdr expr)))))))
 
 (defun push-not (expr)
-  (let ((operator (car expr)))
-    (if (latom-p operator)
-      expr
-      (if (lnot-p operator)
-        (push-not-helper (car (cdr expr)))
-        (apply-on-operands operator (cdr expr) #'push-not)))))
+  (typecase (car expr)
+    (lnot (push-not-helper (second expr)))
+    (latom expr)
+    (otherwise (cons (car expr)
+                     (mapcar #'push-not 
+                             (cdr expr))))))
 
 (defun standarise-apart (expr)
   (defparameter *USED_VARS* nil)
-  (defparameter *UNUSED_VARS* '(#\z #\y #\x #\w #\v #\u #\t #\s #\r #\q #\p #\o #\n #\m #\l #\k #\j #\i
-                                #\h #\g #\f #\e #\d #\c #\b #\a))
+  (defparameter *UNUSED_VARS* '(#\z #\y #\x #\w #\v #\u #\t #\s #\r #\q #\p #\o
+                                #\n #\m #\l #\k #\j #\i #\h #\g #\f #\e #\d #\c
+                                #\b #\a))
+
   (standarise-apart-helper expr))
 
 (defun skolemize (expr)
-  (defparameter *SKOLEM_VARS* '(#\Z #\Y #\X #\W #\V #\U #\T #\S #\R #\Q #\P #\O #\N #\M #\L #\K #\J #\I
-                                #\H #\G #\F #\E #\D #\C #\B #\A))
+  (defparameter *SKOLEM_VARS* '(#\A #\B #\C #\D #\E #\F #\G #\H #\I #\J #\K #\L
+                                #\M #\N #\O #\P #\Q #\R #\S #\T #\U #\V #\W #\X
+                                #\Y #\Z))
   (skolemize-helper expr))
 
 (defun discard-forall (expr)
-  (let ((operator (car expr)))
-    (if (latom-p operator)
-      expr
-      (if (forall-p operator)
-        (car (cdr expr))
-        (apply-on-operands operator (cdr expr) #'discard-forall)))))
+  (typecase (car expr)
+   (forall (discard-forall (second expr)))
+   (latom expr)
+   (otherwise (cons (car expr)
+                    (mapcar #'discard-forall (cdr expr))))))
 
 
 (defun flatten (expr)
-  (let ((operator (car expr)))
-    (if (latom-p operator)
-      expr
-      (if (land-p operator)
-        (append (list (make-land)) (mapcan #'flatten-and (mapcar #'flatten (cdr expr))))
-        (if (lor-p operator)
-          (flatten-or (mapcar #'flatten (cdr expr))))))))
+  (typecase (car expr)
+    (land (cons (make-land)
+                (mapcan #'flatten-and 
+                        (mapcar #'flatten (cdr expr)))))
+    (lor (flatten-or (mapcar #'flatten
+                             (cdr expr))))
+    (otherwise expr)))
 
 (defun clauses (expr)
-  (if (latom-p (car expr))
+  (if (or (latom-p (car expr))
+          (lnot-p (car expr)))
     expr
     (mapcar #'clauses (cdr expr))))
 
-(defun rename-clauses (expr)
-  (defparameter *UNUSED_VARS* '(#\z #\y #\x #\w #\v #\u #\t #\s #\r #\q #\p #\o #\n #\m #\l #\k #\j #\i
-                                #\h #\g #\f #\e #\d #\c #\b #\a))
+(defun rename-clauses (expr) 
+  (defparameter *UNUSED_VARS* '(#\z #\y #\x #\w #\v #\u #\t #\s #\r #\q #\p #\o
+                                #\n #\m #\l #\k #\j #\i #\h #\g #\f #\e #\d #\c
+                                #\b #\a))
+
+  (defparameter *SKOLEM_VARS* '(#\A #\B #\C #\D #\E #\F #\G #\H #\I #\J #\K #\L
+                                #\M #\N #\O #\P #\Q #\R #\S #\T #\U #\V #\W #\X
+                                #\Y #\Z))
   (mapcar #'(lambda (x)
               (defparameter *PAIRS* nil)
               (rename-clauses-helper x))
@@ -130,71 +137,76 @@
 ;; =========================================
 
 (defun push-not-helper (expr)
-  (let ((operator (car expr)))
-    (if (land-p operator)
-      (let ((new-expr (list (make-lor))))
-        (do ((term (cdr expr) (cdr term)))
-          ((null term ) (reverse new-expr))
-          (setf new-expr (cons (push-not-helper (car term)) new-expr))))
-      (if (lor-p operator)
-        (let ((new-expr (list (make-land))))
-          (do ((term (cdr expr) (cdr term)))
-            ((null term) (reverse new-expr))
-            (setf new-expr (cons (push-not-helper (car term)) new-expr))))
-        (if (forall-p operator)
-          (list (make-there-exists :sym (forall-sym operator)) (push-not-helper (car (cdr expr))))
-          (if (there-exists-p operator)
-            (list (make-forall :sym (there-exists-sym operator)) (push-not-helper (car (cdr expr))))
-            (if (lnot-p operator)
-              (car (cdr expr))
-              (list (make-lnot) expr))))))))
+  (typecase (car expr)
+    (land (cons (make-lor)
+                (mapcar #'push-not-helper 
+                        (cdr expr)))) 
+    (lor (cons (make-land)
+               (mapcar #'push-not-helper 
+                       (cdr expr))) )
+    (forall (list (make-there-exists :sym (forall-sym (car expr))) 
+                  (push-not-helper (second expr))))
+    (there-exists (list (make-forall :sym (there-exists-sym (car expr))) 
+                        (push-not-helper (second expr))))
+    (lnot (second expr))
+    (otherwise (list (make-lnot)
+                     expr))))
 
 (defun standarise-apart-helper (expr)
-  (let ((operator (car expr)))
-    (if (latom-p operator)
-      expr
-      (if (forall-p operator)
-        (if (member (forall-sym operator) *USED_VARS*)
-          (rename (cdr expr) (forall-sym operator))
-          (setf *USED_VARS* (cons (forall-sym operator) *USED_VARS*)))
-        (if (there-exists-p operator)
-          (if (member (there-exists-p operator) *USED_VARS*)
-            (rename (cdr expr) (there-exists-sym operator))
-            (setf *USED_VARS* (cons (there-exists-sym operator) *USED_VARS*)))
-          (apply-on-operands operator (cdr expr) #'standarise-apart-helper))))))
+  (typecase (car expr)
+    (latom expr)
 
+    (forall (let ((repl (find-repl (forall-sym (car expr)))))
+              (list (make-forall :sym repl)
+                    (rename (standarise-apart-helper (second expr))
+                            repl
+                            (forall-sym (car expr))))))
+    
+    (there-exists (let ((repl (find-repl (there-exists-sym (car expr)))))
+                    (list (make-there-exists :sym repl)
+                          (rename (standarise-apart-helper (second expr))
+                                  repl
+                                  (there-exists-sym (car expr))))) )
+    (otherwise (cons (car expr)
+                     (mapcar #'standarise-apart-helper (cdr expr))))))
 
-(defun rename (expr var)
-  (let ((new-var nil))
-    (do ((unused-vars *UNUSED_VARS* (cdr unused-vars)))
-      ((not (member (car unused-vars) *USED_VARS*)) (setf new-var (car unused-vars)) 
-                                                    (setf *UNUSED_VARS* unused-vars)
-                                                    (setf *USED_VARS* (cons new-var *USED_VARS*)))) 
-    (rename-helper expr new-var var)))
+(defun find-repl (var)
+  (if (member var *USED_VARS*)
+    (find-if #'(lambda (x)
+                 (not (member x *USED_VARS*))) *UNUSED_VARS*)  
+    var))
+
+(defun rename (expr new-var var)
+  (if (member var *USED_VARS*)
+    (progn (setf *USED_VARS* (cons new-var *USED_VARS*))
+           (rename-helper expr new-var var))
+    (progn (setf *USED_VARS* (cons var *USED_VARS*))
+           expr)))
 
 (defun rename-helper (expr new-var var)
-  (let ((operator (car expr)))
-    (if (latom-p operator)
-      (let ((new-expr (list operator)))
-        (do ((term (cdr expr) (cdr term)))
-          ((null term) (reverse new-expr))
-          (if (equalp var (car term))
-            (setf new-expr (cons new-var new-expr))
-            (setf new-expr (cons (car term) new-expr)))))    
-      (let ((new-expr (list operator)))
-        (do ((term (cdr expr) (cdr term)))
-          ((null term) (reverse new-expr))
-          (setf new-expr (cons (rename-helper (car term) new-var var) new-expr)))))))
+    (if (latom-p (car expr))
+      (append (list (car expr))
+              (mapcar #'(lambda (x)
+                          (if (equalp x var)
+                            new-var
+                            x))
+                      (cdr expr)))
+      (append (list (car expr))
+              (mapcar #'(lambda (x)
+                          (rename-helper x new-var var))
+                      (cdr expr)))))
 
 (defun skolemize-helper (expr)
-  (let ((operator (car expr)))
-    (if (latom-p operator)
-      expr
-      (if (there-exists-p operator)
-        (let ((skolem-var (car *SKOLEM_VARS*)))
-          (setf *SKOLEM_VARS* (cdr *SKOLEM_VARS*)) 
-          (rename-helper (car (cdr expr)) skolem-var (there-exists-sym operator)))
-        (apply-on-operands operator (cdr expr) #'skolemize-helper)))))
+  (typecase (car expr)
+    (latom expr)
+    (there-exists (let ((skolem-var (car *SKOLEM_VARS*)))
+                    (setf *SKOLEM_VARS* (cdr *SKOLEM_VARS*))
+                    (rename-helper (second expr)
+                                   skolem-var
+                                   (there-exists-sym (car expr)))))
+    (otherwise (cons (car expr)
+                     (mapcar #'skolemize-helper
+                             (cdr expr))))))
 
 (defun flatten-and (expr)
   (if (land-p (car expr))
@@ -202,7 +214,8 @@
     (list expr)))
 
 (defun flatten-or (expr)
-  (flatten-or-helper (cons (append (list (make-lor)) (filter-atoms expr))
+  (flatten-or-helper (cons (cons (make-lor) 
+                                 (filter-atoms expr))
                            (filter-ops expr))))
 
 (defun flatten-or-helper (expr)
@@ -219,7 +232,7 @@
           (right-op (car right-side)))
       (if (and (lor-p left-op)
                (lor-p right-op))
-        (append (list (lor-p))
+        (append (list (make-lor))
                 (cdr left-side)
                 (cdr right-side))
         (if (lor-p left-op)
@@ -229,57 +242,58 @@
             (combine-and-and (cdr left-side) (cdr right-side))))))))
 
 (defun combine-and-or (and-list or-list)
-  (append (list (make-land))
+  (cons (make-land)
           (mapcar #'(lambda (x)
                       (append (list (make-lor))
                               (cons x or-list)))
                   and-list)))
 
 (defun combine-and-and (and-list1 and-list2)
-  (append (list (make-land))
-          (mapcan #'(lambda (x)
-                      (cdr x))
-                  (mapcar #'(lambda (x)
-                              (combine-and-or and-list1 (list x)))
-                          and-list2)  )))
+  (cons (make-land)
+        (mapcan #'(lambda (x)
+                    (cdr x))
+                (mapcar #'(lambda (x)
+                            (combine-and-or and-list1 (list x)))
+                        and-list2))))
 
 (defun filter-atoms (expr)
   (mapcan #'(lambda (x) 
-              (when (latom-p (car x)) (list x)))
+              (when (or (latom-p (car x))
+                        (lnot-p (car x))) (list x)))
           expr))
 
 (defun filter-ops (expr)
   (mapcan #'(lambda (x)
-              (when (not (latom-p (car x))) (list x)))
+              (when (not (or (latom-p (car x))
+                             (lnot-p (car x)))) (list x)))
           expr))
 
-(defun apply-on-operands (operator expr fun)
-  (let ((new-expr (list operator)))
-    (do ((term expr (cdr term)))
-      ((null term) (reverse new-expr)) (setf new-expr (cons (funcall fun (car term)) new-expr)))))
-
 (defun rename-clauses-helper (expr)
-  (if (null expr)
-    nil
-    (if (listp expr)
-      (cons (rename-clauses-helper (car expr))
-            (rename-clauses-helper (cdr expr)))
-      (if (latom-p expr)
-        expr
-        (let ((repl (replacedp expr *PAIRS*)))
-          (if repl
-            repl
-            (progn (setf repl (car *UNUSED_VARS*))
-                   (setf *UNUSED_VARS* (cdr *UNUSED_VARS*))
-                   (setf *PAIRS* (cons (make-pair :sym expr :repl repl) *PAIRS*))
-                   repl)))))))
+  (typecase expr
+    (cons (cons (rename-clauses-helper (car expr))
+                (rename-clauses-helper (cdr expr))))
+    (list nil)
+    (latom expr)
+    (lnot expr)
+    (otherwise  (let ((repl (replacedp expr *PAIRS*)))
+                  (if repl
+                    (pair-repl repl)
+                    (if (upper-case-p expr)
+                      (progn (setf repl (car *SKOLEM_VARS*))
+                             (setf *SKOLEM_VARS* (cdr *SKOLEM_VARS*))
+                             (setf *PAIRS* (cons (make-pair :sym expr :repl repl) 
+                                                 *PAIRS*))
+                             repl)
+                      (progn (setf repl (car *UNUSED_VARS*))
+                             (setf *UNUSED_VARS* (cdr *UNUSED_VARS*))
+                             (setf *PAIRS* (cons (make-pair :sym expr :repl repl) 
+                                                 *PAIRS*))
+                             repl)))))))
 
 (defun replacedp (expr pairs)
-  (if (null pairs)
-    nil
-    (if (equalp (pair-sym (car pairs)) expr)
-      (pair-repl (car pairs))
-      (replacedp expr (cdr pairs)))))
+  (find-if #'(lambda (x)
+               (equalp (pair-sym x) expr))
+           pairs))
 
 ;; =========================================
 ;; ============= PRINTING ==================
@@ -288,26 +302,23 @@
 (defun print-fol (expr)
   (if (consp expr)
     (let ((operands (mapcar #'print-fol (cdr expr))))
-      (if (land-p (car expr))
-        (format nil "(~{~A~^ & ~})" operands)
-        (if (lor-p (car expr))
-          (format nil "(~{~A~^ v ~})" operands)
-          (if (limpl-p (car expr))
-            (format nil "(~{A~^ impl ~})" operands)
-            (if (leq-p (car expr))
-              (format nil "(~{A^ eq ~})" operands)
-              (if (forall-p (car expr))
-                (format nil "forall ~A [ ~{~A~} ]"
+      (typecase (car expr)
+        (land (format nil "(~{~A~^ & ~})" operands))
+        (lor (format nil "(~{~A~^ v ~})" operands))
+        (limpl (format nil "(~{~A~^ impl ~})" operands))
+        (leq (format nil "(~{~A~^ eq ~})" operands))
+        (forall (format nil "forall ~A [ ~{~A~} ]"
                         (forall-sym (car expr))
-                        operands)
-                (if (there-exists-p (car expr))
-                  (format nil "there-exists ~A [ ~{~A~} ]" 
-                          (there-exists-sym (car expr))
-                          operands)
-                  (if (latom-p (car expr))
-                    (format nil "~A(~{~A~^,~})"
-                            (latom-sym (car expr))
-                            operands)))))))))
+                        operands))
+        (there-exists (format nil "there-exists ~A [ ~{~A~} ]" 
+                              (there-exists-sym (car expr))
+                              operands))
+        (latom (format nil "~A(~{~A~^,~})"
+                       (latom-sym (car expr))
+                       operands))
+        (lnot (if (lnot-p (car expr)) 
+                (format nil "not ~{~A~}"
+                        operands)))))
     (format nil "~C" expr)))
 
 (defun print-clause-form (expr)
@@ -322,7 +333,9 @@
 
 (defun print-atom (expr)
   (if (consp expr)
-    (format nil "~A(~{~A~^, ~})"
-            (latom-sym (car expr))
-            (mapcar #'print-atom (cdr expr)))
+    (if (latom-p (car expr))
+      (format nil "~A(~{~A~^, ~})"
+              (latom-sym (car expr))
+              (mapcar #'print-atom (cdr expr)))
+      (format nil "not ~A" (print-atom (second expr))))
     (format nil "~C" expr)))
