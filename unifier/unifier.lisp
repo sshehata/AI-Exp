@@ -31,10 +31,14 @@
 ;; ============= TOP LEVEL FUNCTION ========
 ;; =========================================
 
+; takes two expressions and returns
+; and MGU
 (defun Unify (E1 E2 &optional visual)
-  (format t "FINAL SUBST: ~%~A" 
+  (format t "FINAL SUBST: ~%~A~%" 
           (unify1 E1 E2 nil visual)))
 
+; takes two expressions and tries to unify
+; crossponding elements
 (defun unify1 (E1 E2 mu &optional visual)
   (visualise-expr E1 E2 visual)
   (if (and (null E1)
@@ -59,6 +63,8 @@
     (return-from unify1 (make-fail)))
   (unify1 (cdr E1) (cdr E2) (unify1 (car E1) (car E2) mu visual) visual))
 
+; called when a variable is encountered
+; tries to bind the variable
 (defun unify-var (x e mu &optional visual)
   (let ((binding (bound-p x mu)))
     (if binding 
@@ -76,15 +82,19 @@
 ;; ========== HELPER FUNCTIONS =============
 ;; =========================================
 
+; returns true if e1 is not a variable or 
+; a list
 (defun atomp (E1)
   (or (predicate-p E1)
       (constant-p E1)))
 
+; returns true if x has a binding in mu
 (defun bound-p (x mu)
   (find-if #'(lambda (e)
                (equalp (binding-lvar e) x))
            mu))
 
+; return e after applying subst mu
 (defun ground (mu e)
   (if (consp e)
     (cons (ground mu (car e))
@@ -96,12 +106,15 @@
           e))
       e)))
 
+; returns true if x occurs in term
 (defun occurs-p (x term)
   (if (consp term)
     (or (occurs-p x (car term))
         (occurs-p x (cdr term)))
     (equalp x term)))
 
+; updates the bindings in mu with the
+; binding found
 (defun update-mu (new-mu mu)
   (mapcar #'(lambda (binding)
               (make-binding :term (ground new-mu (binding-term binding))
@@ -113,6 +126,7 @@
 ;; ============= PRINTING ==================
 ;; =========================================
 
+; prints an fol expression
 (defun print-expr (expr)
   (if (consp expr)
     (if (predicate-p (car expr))
@@ -125,13 +139,16 @@
       (lvar (format nil "~C" (lvar-sym expr)))
       (predicate (format nil "~C" (predicate-sym expr))))))
 
+; prints mu as a list of bindings
+; if visual is true
 (defun visualise-mu (mu visual)
   (if visual
     (progn (format t "~A ~%" mu) 
            (read-char)))
   mu)
 
-
+; prints a step in the solution as
+; E1 == E2 if visual is true
 (defun visualise-expr (E1 E2 visual)
   (if (and visual
            (not (and (null E1)
